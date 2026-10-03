@@ -1,0 +1,3 @@
+ALTER TABLE activities ADD COLUMN pinned INTEGER NOT NULL DEFAULT 0;
+ALTER TABLE sessions ADD COLUMN paused_at TEXT;
+ALTER TABLE sessions ADD COLUMN paused_duration_seconds INTEGER NOT NULL DEFAULT 0;
