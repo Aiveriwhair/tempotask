@@ -54,6 +54,7 @@ export async function updateSession(
     start_time?: string;
     end_time?: string | null;
     note?: string | null;
+    paused_duration_seconds?: number;
   },
 ): Promise<void> {
   const db = await getDb();
@@ -77,11 +78,12 @@ export async function addManualSession(
   startTime: string,
   endTime: string,
   note: string | null,
+  pausedDurationSeconds = 0,
 ): Promise<number> {
   const db = await getDb();
   const result = await db.execute(
-    `INSERT INTO sessions (activity_id, start_time, end_time, note) VALUES ($1, $2, $3, $4)`,
-    [activityId, startTime, endTime, note],
+    `INSERT INTO sessions (activity_id, start_time, end_time, note, paused_duration_seconds) VALUES ($1, $2, $3, $4, $5)`,
+    [activityId, startTime, endTime, note, pausedDurationSeconds],
   );
   return result.lastInsertId as number;
 }
@@ -147,10 +149,15 @@ export async function mergeSessions(sessionIds: number[]): Promise<void> {
   );
   const ends = rows.map((s) => s.end_time ?? new Date().toISOString());
   const end = ends.reduce((max, e) => (e > max ? e : max), ends[0]);
-  const pausedTotal = rows.reduce(
-    (sum, s) => sum + (s.paused_duration_seconds || 0),
-    0,
-  );
+  // Gaps between the merged sessions count as pause, so merging never changes
+  // the tracked time (only overlaps can make it shrink, clamped at 0 pause).
+  const trackedSeconds = rows.reduce((sum, s, i) => {
+    const sessionEnd = new Date(ends[i]).getTime();
+    const sessionStart = new Date(s.start_time).getTime();
+    return sum + (sessionEnd - sessionStart) / 1000 - (s.paused_duration_seconds || 0);
+  }, 0);
+  const spanSeconds = (new Date(end).getTime() - new Date(start).getTime()) / 1000;
+  const pausedTotal = Math.max(0, Math.round(spanSeconds - trackedSeconds));
   const note =
     rows
       .map((s) => s.note)

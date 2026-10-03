@@ -1,7 +1,7 @@
 import { useState } from "react";
 import type { SessionWithActivity } from "../lib/sessions";
 import { addManualSession, deleteSession, updateSession } from "../lib/sessions";
-import { formatDateTimeLocalInput, parseDateTimeLocalInput } from "../lib/format";
+import { formatDateTimeLocalInput, formatMinutes, parseDateTimeLocalInput } from "../lib/format";
 import type { ActivityWithRunning } from "../lib/types";
 
 interface Props {
@@ -31,7 +31,13 @@ export default function SessionEditorModal({
     formatDateTimeLocalInput(session?.end_time ?? new Date().toISOString())
   );
   const [note, setNote] = useState(session?.note ?? "");
+  const [pauseMinutes, setPauseMinutes] = useState(
+    String(Math.round((session?.paused_duration_seconds ?? 0) / 60))
+  );
   const [saving, setSaving] = useState(false);
+
+  const spanMinutes = (new Date(end).getTime() - new Date(start).getTime()) / 60000;
+  const pauseValue = Math.max(0, Math.round(Number(pauseMinutes) || 0));
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -39,14 +45,16 @@ export default function SessionEditorModal({
     try {
       const startIso = parseDateTimeLocalInput(start);
       const endIso = parseDateTimeLocalInput(end);
+      const pausedSeconds = Math.max(0, Math.round(Number(pauseMinutes) || 0)) * 60;
       if (session) {
         await updateSession(session.id, {
           start_time: startIso,
           end_time: endIso,
           note: note || null,
+          paused_duration_seconds: pausedSeconds,
         });
       } else {
-        await addManualSession(activityId, startIso, endIso, note || null);
+        await addManualSession(activityId, startIso, endIso, note || null, pausedSeconds);
       }
       onSaved();
       onClose();
@@ -86,6 +94,29 @@ export default function SessionEditorModal({
           <div className="form-row">
             <label>Fin</label>
             <input type="datetime-local" value={end} onChange={(e) => setEnd(e.target.value)} required />
+          </div>
+
+          <div className="form-row">
+            <label>Pause (minutes, déduite de la durée)</label>
+            <input
+              type="number"
+              min={0}
+              step={1}
+              value={pauseMinutes}
+              onChange={(e) => setPauseMinutes(e.target.value)}
+            />
+            {Number.isFinite(spanMinutes) && (
+              <div
+                className="duration-summary"
+                style={spanMinutes < 0 ? { color: "var(--danger)" } : undefined}
+              >
+                {spanMinutes < 0
+                  ? "La fin est avant le début."
+                  : pauseValue > 0
+                    ? `Durée comptée : ${formatMinutes(Math.max(0, spanMinutes - pauseValue))} (${formatMinutes(spanMinutes)} − ${formatMinutes(pauseValue)} de pause)`
+                    : `Durée comptée : ${formatMinutes(spanMinutes)}`}
+              </div>
+            )}
           </div>
 
           <div className="form-row">

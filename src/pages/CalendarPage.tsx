@@ -13,7 +13,7 @@ import {
   subMonths,
 } from "date-fns";
 import { fr } from "date-fns/locale";
-import { ChevronLeft, ChevronRight, Plus, StickyNote } from "lucide-react";
+import { ChevronLeft, ChevronRight, Pause, Plus, StickyNote } from "lucide-react";
 import { listSessionsForRange, mergeSessions, type SessionWithActivity } from "../lib/sessions";
 import { useTimer } from "../lib/TimerContext";
 import { formatMinutes, formatTime } from "../lib/format";
@@ -186,8 +186,18 @@ export default function CalendarPage() {
                         </div>
                       )}
                     </div>
-                    <div style={{ fontSize: 12.5, fontWeight: 600 }}>
-                      {formatMinutes(sessionMinutes(s, now))}
+                    <div style={{ textAlign: "right", flexShrink: 0 }}>
+                      <div style={{ fontSize: 12.5, fontWeight: 600 }}>
+                        {formatMinutes(sessionMinutes(s, now))}
+                      </div>
+                      {/* Pauses (incl. gaps from merged sessions) are deducted: show the math. */}
+                      {s.paused_duration_seconds >= 60 && (
+                        <div className="pause-breakdown" title="Le temps de pause est déduit de la durée">
+                          <Pause size={10} />
+                          {formatMinutes(sessionMinutes(s, now) + s.paused_duration_seconds / 60)} −{" "}
+                          {formatMinutes(s.paused_duration_seconds / 60)} de pause
+                        </div>
+                      )}
                     </div>
                   </div>
                 ))}

@@ -670,6 +670,24 @@ button {
   white-space: nowrap;
 }
 
+.pause-breakdown {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 3px;
+  margin-top: 2px;
+  font-size: 11px;
+  color: var(--text-muted);
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
+.duration-summary {
+  font-size: 12px;
+  color: var(--text-muted);
+  font-variant-numeric: tabular-nums;
+}
+
 .calendar-nav {
   display: flex;
   align-items: center;
