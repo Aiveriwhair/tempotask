@@ -287,7 +287,11 @@ export default function ActivitiesPage() {
       )}
 
       {focusActivityId != null && (
-        <FocusMode activityId={focusActivityId} onClose={() => setFocusActivityId(null)} />
+        <FocusMode
+          activityId={focusActivityId}
+          completedSeconds={totalSeconds.get(focusActivityId) ?? 0}
+          onClose={() => setFocusActivityId(null)}
+        />
       )}
     </div>
   );

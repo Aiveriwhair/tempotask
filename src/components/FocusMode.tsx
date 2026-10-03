@@ -7,10 +7,12 @@ import ShortcutBar from "./ShortcutBar";
 
 interface Props {
   activityId: number;
+  /** Total of the activity's completed sessions, excluding the running one. */
+  completedSeconds: number;
   onClose: () => void;
 }
 
-export default function FocusMode({ activityId, onClose }: Props) {
+export default function FocusMode({ activityId, completedSeconds, onClose }: Props) {
   const { activities, now, start, stop, pause, resume, playPause, setRunningNote } = useTimer();
   const activity = activities.find((a) => a.id === activityId);
   const [note, setNote] = useState(activity?.running_note ?? "");
@@ -86,8 +88,13 @@ export default function FocusMode({ activityId, onClose }: Props) {
           fontVariantNumeric: "tabular-nums",
         }}
       >
-        {formatSeconds(elapsedSeconds)}
+        {formatSeconds(isRunning ? elapsedSeconds : completedSeconds)}
         {isPaused && <Pause size={44} />}
+      </div>
+      <div style={{ marginTop: -16, fontSize: 14, color: "var(--text-muted)", fontVariantNumeric: "tabular-nums" }}>
+        {isRunning
+          ? `Session en cours · total ${formatSeconds(completedSeconds + elapsedSeconds)}`
+          : "Temps total"}
       </div>
       <div style={{ display: "flex", gap: 12 }}>
         {isRunning ? (
