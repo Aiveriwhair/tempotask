@@ -14,7 +14,14 @@ function levelFor(minutes: number): number {
   return 4;
 }
 
-const LEVEL_COLORS = ["var(--surface-alt)", "#c7d2fe", "#a5b4fc", "#818cf8", "#6366f1"];
+// Derived from the accent so the scale reads in both light and dark mode.
+const LEVEL_COLORS = [
+  "color-mix(in srgb, var(--text) 7%, transparent)",
+  "color-mix(in srgb, var(--accent) 30%, transparent)",
+  "color-mix(in srgb, var(--accent) 55%, transparent)",
+  "color-mix(in srgb, var(--accent) 80%, transparent)",
+  "var(--accent)",
+];
 
 export default function Heatmap({ data, weeks = 26, onDayClick }: Props) {
   const today = new Date();
@@ -45,10 +52,10 @@ export default function Heatmap({ data, weeks = 26, onDayClick }: Props) {
           );
         })}
       </div>
-      <div style={{ display: "flex", alignItems: "center", gap: 4, fontSize: 11, color: "var(--text-muted)" }}>
+      <div className="heatmap-legend">
         <span>Moins</span>
         {LEVEL_COLORS.map((c, i) => (
-          <div key={i} style={{ width: 10, height: 10, borderRadius: 3, background: c }} />
+          <div key={i} className="heatmap-cell" style={{ background: c }} />
         ))}
         <span>Plus</span>
       </div>

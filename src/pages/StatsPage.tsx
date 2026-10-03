@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { format, subDays } from "date-fns";
 import { Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
+import { Camera, Flame } from "lucide-react";
 import { listAllSessions, type SessionWithActivity } from "../lib/sessions";
 import { useTimer } from "../lib/TimerContext";
 import {
@@ -83,7 +84,8 @@ export default function StatsPage() {
       <div className="page-header">
         <h1>Stats</h1>
         <button className="btn" onClick={handleExportImage} disabled={exporting}>
-          {exporting ? "Génération…" : "📸 Exporter en image"}
+          <Camera size={14} style={{ verticalAlign: -2, marginRight: 5 }} />
+          {exporting ? "Génération…" : "Exporter en image"}
         </button>
       </div>
 
@@ -108,12 +110,32 @@ export default function StatsPage() {
           <BarChart data={last14Days}>
             <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
             <XAxis dataKey="day" fontSize={11} stroke="var(--text-muted)" />
-            <YAxis fontSize={11} stroke="var(--text-muted)" />
+            <YAxis
+              fontSize={11}
+              stroke="var(--text-muted)"
+              width={44}
+              tickFormatter={(m) => formatMinutes(Number(m))}
+            />
             <Tooltip
               formatter={(value) => formatMinutes(Number(value))}
-              contentStyle={{ background: "var(--surface)", border: "1px solid var(--border)" }}
+              cursor={{ fill: "var(--accent-soft)" }}
+              contentStyle={{
+                background: "var(--surface)",
+                border: "1px solid var(--border)",
+                borderRadius: 8,
+                fontSize: 12,
+              }}
+              labelStyle={{ color: "var(--text)", fontWeight: 600 }}
+              itemStyle={{ color: "var(--text-muted)" }}
             />
-            <Bar dataKey="minutes" fill="#6366f1" radius={[4, 4, 0, 0]} />
+            {/* `now` ticks every second while a timer runs, which would restart the animation */}
+            <Bar
+              dataKey="minutes"
+              name="Temps"
+              fill="var(--accent)"
+              radius={[4, 4, 0, 0]}
+              isAnimationActive={false}
+            />
           </BarChart>
         </ResponsiveContainer>
       </div>
@@ -207,7 +229,16 @@ export default function StatsPage() {
           </div>
         </div>
         <div className="card stat-tile">
-          <div className="value">{bestStreak.streak > 0 ? `🔥 ${bestStreak.streak}` : "—"}</div>
+          <div className="value">
+            {bestStreak.streak > 0 ? (
+              <>
+                <Flame size={20} style={{ verticalAlign: -3, marginRight: 4 }} />
+                {bestStreak.streak}
+              </>
+            ) : (
+              "—"
+            )}
+          </div>
           <div className="label">
             Meilleure série{bestStreak.name ? ` — ${bestStreak.name}` : ""}
           </div>

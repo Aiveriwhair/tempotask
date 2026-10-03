@@ -28,7 +28,8 @@ interface TimerContextValue {
   isAnyRunning: (exceptActivityId?: number) => ActivityWithRunning | null;
   start: (activityId: number) => Promise<void>;
   stop: (activityId: number) => Promise<void>;
-  toggle: (activityId: number) => Promise<void>;
+  /** Start if idle, otherwise pause/resume the running session (never stops it). */
+  playPause: (activityId: number) => Promise<void>;
   pause: (activityId: number) => Promise<void>;
   resume: (activityId: number) => Promise<void>;
   setRunningNote: (activityId: number, note: string) => Promise<void>;
@@ -44,11 +45,16 @@ export function TimerProvider({ children }: { children: ReactNode }) {
   const notifiedSessions = useRef<Set<number>>(new Set());
 
   const refresh = useCallback(async () => {
-    const rows = await listActivities(false);
-    setActivities(rows);
-    setLoading(false);
-    const { startIso, endIso } = getLocalDayRange(new Date());
-    setTodaySessions(await listSessionsForRange(startIso, endIso));
+    try {
+      const rows = await listActivities(false);
+      setActivities(rows);
+      const { startIso, endIso } = getLocalDayRange(new Date());
+      setTodaySessions(await listSessionsForRange(startIso, endIso));
+    } catch (err) {
+      console.error("Failed to load data from the database", err);
+    } finally {
+      setLoading(false);
+    }
   }, []);
 
   useEffect(() => {
@@ -116,16 +122,14 @@ export function TimerProvider({ children }: { children: ReactNode }) {
     [activities]
   );
 
-  const toggle = useCallback(
+  const playPause = useCallback(
     async (activityId: number) => {
       const activity = activities.find((a) => a.id === activityId);
-      if (activity?.running_session_id) {
-        await stop(activityId);
-      } else {
-        await start(activityId);
-      }
+      if (!activity?.running_session_id) await start(activityId);
+      else if (activity.running_paused_at) await resume(activityId);
+      else await pause(activityId);
     },
-    [activities, start, stop]
+    [activities, start, pause, resume]
   );
 
   const todayMinutes = useMemo(() => totalMinutes(todaySessions, now), [todaySessions, now]);
@@ -140,20 +144,25 @@ export function TimerProvider({ children }: { children: ReactNode }) {
         id: a.id,
         name: a.name,
         running: a.running_session_id != null,
+        paused: !!a.running_paused_at,
       })),
       todayMinutes: todayMinutesBucket,
     }).catch(() => {});
   }, [activities, loading, todayMinutesBucket]);
 
-  // Let the tray dropdown trigger start/stop without opening the main window.
+  // Let the tray dropdown control timers without opening the main window.
   useEffect(() => {
-    const unlisten = listen<number>("tray://toggle-timer", (event) => {
-      toggle(event.payload);
+    const unlistenPlayPause = listen<number>("tray://play-pause-timer", (event) => {
+      playPause(event.payload);
+    });
+    const unlistenStop = listen<number>("tray://stop-timer", (event) => {
+      stop(event.payload);
     });
     return () => {
-      unlisten.then((f) => f());
+      unlistenPlayPause.then((f) => f());
+      unlistenStop.then((f) => f());
     };
-  }, [toggle]);
+  }, [playPause, stop]);
 
   // Warn with a system notification if a session has been running for a long time.
   useEffect(() => {
@@ -187,7 +196,7 @@ export function TimerProvider({ children }: { children: ReactNode }) {
     isAnyRunning,
     start,
     stop,
-    toggle,
+    playPause,
     pause,
     resume,
     setRunningNote,

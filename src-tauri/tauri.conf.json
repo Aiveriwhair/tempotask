@@ -14,10 +14,10 @@
       {
         "label": "main",
         "title": "TempoTask",
-        "width": 1100,
-        "height": 720,
-        "minWidth": 820,
-        "minHeight": 560
+        "width": 1240,
+        "height": 800,
+        "minWidth": 1020,
+        "minHeight": 700
       }
     ],
     "security": {

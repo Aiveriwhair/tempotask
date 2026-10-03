@@ -9,6 +9,8 @@ pub struct TrayActivity {
     pub id: i64,
     pub name: String,
     pub running: bool,
+    #[serde(default)]
+    pub paused: bool,
 }
 
 fn format_minutes(total_minutes: i64) -> String {
@@ -30,15 +32,23 @@ fn rebuild_tray_menu(
     let mut items: Vec<MenuItem<tauri::Wry>> = Vec::new();
 
     for activity in activities.into_iter().take(8) {
-        let label = if activity.running {
-            format!("⏹ Arrêter — {}", activity.name)
-        } else {
-            format!("▶ Démarrer — {}", activity.name)
+        let play_pause_label = match (activity.running, activity.paused) {
+            (false, _) => format!("▶ Démarrer — {}", activity.name),
+            (true, false) => format!("⏸ Pause — {}", activity.name),
+            (true, true) => format!("▶ Reprendre — {}", activity.name),
         };
-        let item_id = format!("activity-{}", activity.id);
-        let item = MenuItem::with_id(&app, item_id, label, true, None::<&str>)
+        let item_id = format!("playpause-{}", activity.id);
+        let item = MenuItem::with_id(&app, item_id, play_pause_label, true, None::<&str>)
             .map_err(|e| e.to_string())?;
         items.push(item);
+
+        if activity.running {
+            let stop_id = format!("stop-{}", activity.id);
+            let stop_label = format!("⏹ Arrêter — {}", activity.name);
+            let stop_item = MenuItem::with_id(&app, stop_id, stop_label, true, None::<&str>)
+                .map_err(|e| e.to_string())?;
+            items.push(stop_item);
+        }
     }
 
     let show_item = MenuItem::with_id(&app, "show", "Afficher TempoTask", true, None::<&str>)
@@ -118,10 +128,15 @@ pub fn run() {
                         }
                         return;
                     }
-                    if let Some(activity_id) = id.strip_prefix("activity-") {
-                        if let Ok(activity_id) = activity_id.parse::<i64>() {
-                            let _ = app.emit("tray://toggle-timer", activity_id);
-                        }
+                    let (event, activity_id) = if let Some(rest) = id.strip_prefix("playpause-") {
+                        ("tray://play-pause-timer", rest)
+                    } else if let Some(rest) = id.strip_prefix("stop-") {
+                        ("tray://stop-timer", rest)
+                    } else {
+                        return;
+                    };
+                    if let Ok(activity_id) = activity_id.parse::<i64>() {
+                        let _ = app.emit(event, activity_id);
                     }
                 })
                 .build(app)?;

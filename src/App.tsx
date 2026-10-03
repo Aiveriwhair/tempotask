@@ -1,4 +1,5 @@
 import { NavLink, Route, Routes } from "react-router-dom";
+import { BarChart3, CalendarDays, ListChecks, Settings2, TimerIcon } from "lucide-react";
 import "./App.css";
 import ActivitiesPage from "./pages/ActivitiesPage";
 import CalendarPage from "./pages/CalendarPage";
@@ -7,26 +8,32 @@ import SettingsPage from "./pages/SettingsPage";
 import { useTimer } from "./lib/TimerContext";
 import { computeElapsedSeconds, formatMinutes, formatSeconds } from "./lib/format";
 
+const NAV_ITEMS = [
+  { to: "/", end: true, label: "Activités", icon: ListChecks },
+  { to: "/calendar", end: false, label: "Calendrier", icon: CalendarDays },
+  { to: "/stats", end: false, label: "Stats", icon: BarChart3 },
+  { to: "/settings", end: false, label: "Réglages", icon: Settings2 },
+];
+
 function App() {
   const { runningActivity, now, todayMinutes } = useTimer();
 
   return (
     <div className="app-shell">
       <aside className="sidebar">
-        <div className="brand">⏱ TempoTask</div>
+        <div className="brand">
+          <span className="brand-icon">
+            <TimerIcon size={16} />
+          </span>
+          TempoTask
+        </div>
         <nav>
-          <NavLink to="/" end className="nav-link">
-            Activités
-          </NavLink>
-          <NavLink to="/calendar" className="nav-link">
-            Calendrier
-          </NavLink>
-          <NavLink to="/stats" className="nav-link">
-            Stats
-          </NavLink>
-          <NavLink to="/settings" className="nav-link">
-            Réglages
-          </NavLink>
+          {NAV_ITEMS.map(({ to, end, label, icon: Icon }) => (
+            <NavLink key={to} to={to} end={end} className="nav-link">
+              <Icon size={16} />
+              <span>{label}</span>
+            </NavLink>
+          ))}
         </nav>
         <div className="sidebar-footer">
           {runningActivity ? (
@@ -56,12 +63,14 @@ function App() {
         </div>
       </aside>
       <main className="content">
-        <Routes>
-          <Route path="/" element={<ActivitiesPage />} />
-          <Route path="/calendar" element={<CalendarPage />} />
-          <Route path="/stats" element={<StatsPage />} />
-          <Route path="/settings" element={<SettingsPage />} />
-        </Routes>
+        <div className="content-inner">
+          <Routes>
+            <Route path="/" element={<ActivitiesPage />} />
+            <Route path="/calendar" element={<CalendarPage />} />
+            <Route path="/stats" element={<StatsPage />} />
+            <Route path="/settings" element={<SettingsPage />} />
+          </Routes>
+        </div>
       </main>
     </div>
   );

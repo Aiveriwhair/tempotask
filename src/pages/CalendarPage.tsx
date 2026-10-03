@@ -13,10 +13,12 @@ import {
   subMonths,
 } from "date-fns";
 import { fr } from "date-fns/locale";
+import { ChevronLeft, ChevronRight, Plus, StickyNote } from "lucide-react";
 import { listSessionsForRange, mergeSessions, type SessionWithActivity } from "../lib/sessions";
 import { useTimer } from "../lib/TimerContext";
 import { formatMinutes, formatTime } from "../lib/format";
 import { minutesByDay, sessionMinutes } from "../lib/stats";
+import ConfirmDialog from "../components/ConfirmDialog";
 import SessionEditorModal from "../components/SessionEditorModal";
 
 const WEEKDAY_LABELS = ["Lun", "Mar", "Mer", "Jeu", "Ven", "Sam", "Dim"];
@@ -30,6 +32,7 @@ export default function CalendarPage() {
   const [editorState, setEditorState] = useState<
     { mode: "edit"; session: SessionWithActivity } | { mode: "create"; day: Date } | null
   >(null);
+  const [mergeError, setMergeError] = useState<string | null>(null);
 
   const rangeStart = startOfWeek(startOfMonth(month), { weekStartsOn: 1 });
   const rangeEnd = endOfWeek(endOfMonth(month), { weekStartsOn: 1 });
@@ -67,7 +70,7 @@ export default function CalendarPage() {
     const picked = selectedDaySessions.filter((s) => ids.includes(s.id));
     const activityIds = new Set(picked.map((s) => s.activity_id));
     if (activityIds.size > 1) {
-      alert("Tu ne peux fusionner que des sessions de la même activité.");
+      setMergeError("Tu ne peux fusionner que des sessions de la même activité.");
       return;
     }
     await mergeSessions(ids);
@@ -80,14 +83,14 @@ export default function CalendarPage() {
       <div className="page-header">
         <h1>Calendrier</h1>
         <div className="calendar-nav">
-          <button className="btn" onClick={() => setMonth((m) => subMonths(m, 1))}>
-            ←
+          <button className="btn" onClick={() => setMonth((m) => subMonths(m, 1))} aria-label="Mois précédent">
+            <ChevronLeft size={15} />
           </button>
           <strong style={{ textTransform: "capitalize", minWidth: 140, textAlign: "center" }}>
             {format(month, "MMMM yyyy", { locale: fr })}
           </strong>
-          <button className="btn" onClick={() => setMonth((m) => addMonths(m, 1))}>
-            →
+          <button className="btn" onClick={() => setMonth((m) => addMonths(m, 1))} aria-label="Mois suivant">
+            <ChevronRight size={15} />
           </button>
           <button className="btn" onClick={() => setMonth(new Date())}>
             Aujourd'hui
@@ -178,7 +181,8 @@ export default function CalendarPage() {
                             whiteSpace: "nowrap",
                           }}
                         >
-                          📝 {s.note}
+                          <StickyNote size={11} style={{ verticalAlign: -1, marginRight: 3 }} />
+                          {s.note}
                         </div>
                       )}
                     </div>
@@ -203,12 +207,23 @@ export default function CalendarPage() {
                   className="btn btn-primary"
                   onClick={() => setEditorState({ mode: "create", day: selectedDay })}
                 >
-                  + Ajouter une session
+                  <Plus size={14} style={{ verticalAlign: -2, marginRight: 3 }} />
+                  Ajouter une session
                 </button>
               </div>
             </div>
           </div>
         </div>
+      )}
+
+      {mergeError && (
+        <ConfirmDialog
+          title="Fusion impossible"
+          message={mergeError}
+          cancelLabel="OK"
+          onCancel={() => setMergeError(null)}
+          actions={[]}
+        />
       )}
 
       {editorState && (

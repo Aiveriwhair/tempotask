@@ -18,6 +18,13 @@ export async function listActivities(
   return rows;
 }
 
+export async function listArchivedActivities(): Promise<Activity[]> {
+  const db = await getDb();
+  return db.select<Activity[]>(
+    `SELECT * FROM activities WHERE archived = 1 ORDER BY name COLLATE NOCASE`,
+  );
+}
+
 export async function createActivity(input: {
   name: string;
   category_id: number | null;

@@ -166,3 +166,18 @@ export async function mergeSessions(sessionIds: number[]): Promise<void> {
     sessionIds,
   );
 }
+
+// Total tracked seconds per activity, over completed sessions only (the running
+// session is added live by the caller).
+export async function totalSecondsByActivity(): Promise<Map<number, number>> {
+  const db = await getDb();
+  const rows = await db.select<{ activity_id: number; total: number }[]>(
+    `SELECT activity_id,
+            SUM(MAX(0, (julianday(end_time) - julianday(start_time)) * 86400
+                       - paused_duration_seconds)) as total
+     FROM sessions
+     WHERE end_time IS NOT NULL
+     GROUP BY activity_id`,
+  );
+  return new Map(rows.map((r) => [r.activity_id, r.total ?? 0]));
+}

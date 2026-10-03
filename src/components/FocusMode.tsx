@@ -1,6 +1,9 @@
 import { useEffect, useState } from "react";
+import { Pause, X } from "lucide-react";
 import { useTimer } from "../lib/TimerContext";
 import { computeElapsedSeconds, formatSeconds } from "../lib/format";
+import IconButton from "./IconButton";
+import ShortcutBar from "./ShortcutBar";
 
 interface Props {
   activityId: number;
@@ -8,22 +11,38 @@ interface Props {
 }
 
 export default function FocusMode({ activityId, onClose }: Props) {
-  const { activities, now, start, stop, pause, resume, setRunningNote } = useTimer();
+  const { activities, now, start, stop, pause, resume, playPause, setRunningNote } = useTimer();
   const activity = activities.find((a) => a.id === activityId);
   const [note, setNote] = useState(activity?.running_note ?? "");
 
+  const isRunning = activity?.running_session_id != null;
+  const isPaused = !!activity?.running_paused_at;
+
   useEffect(() => {
     function handleKey(e: KeyboardEvent) {
-      if (e.key === "Escape") onClose();
+      if (e.key === "Escape") {
+        onClose();
+        return;
+      }
+      if (!activity) return;
+      // Ignore shortcuts while typing in the note field.
+      if (e.target instanceof HTMLTextAreaElement || e.target instanceof HTMLInputElement) return;
+
+      if (e.code === "Space") {
+        e.preventDefault();
+        playPause(activity.id);
+      } else if (e.code === "KeyS" && e.shiftKey && isRunning) {
+        // Stopping ends the session, so it sits behind a modifier to avoid accidental presses.
+        e.preventDefault();
+        stop(activity.id);
+      }
     }
     window.addEventListener("keydown", handleKey);
     return () => window.removeEventListener("keydown", handleKey);
-  }, [onClose]);
+  }, [activity, isRunning, onClose, stop, playPause]);
 
   if (!activity) return null;
 
-  const isRunning = activity.running_session_id != null;
-  const isPaused = !!activity.running_paused_at;
   const elapsedSeconds = isRunning
     ? computeElapsedSeconds(
         activity.running_start_time as string,
@@ -32,6 +51,12 @@ export default function FocusMode({ activityId, onClose }: Props) {
         now
       )
     : 0;
+
+  const shortcuts = [
+    { keys: "Espace", label: !isRunning ? "Démarrer" : isPaused ? "Reprendre" : "Pause" },
+    ...(isRunning ? [{ keys: "⇧ S", label: "Arrêter" }] : []),
+    { keys: "Esc", label: "Fermer" },
+  ];
 
   return (
     <div
@@ -47,13 +72,22 @@ export default function FocusMode({ activityId, onClose }: Props) {
         gap: 24,
       }}
     >
-      <button className="btn" style={{ position: "absolute", top: 24, right: 24 }} onClick={onClose}>
-        Fermer (Esc)
-      </button>
+      <div style={{ position: "absolute", top: 24, right: 24 }}>
+        <IconButton icon={X} label="Fermer" onClick={onClose} />
+      </div>
       <div style={{ fontSize: 22, fontWeight: 600, color: activity.color }}>{activity.name}</div>
-      <div style={{ fontSize: 80, fontWeight: 700, fontVariantNumeric: "tabular-nums" }}>
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+          gap: 12,
+          fontSize: 80,
+          fontWeight: 700,
+          fontVariantNumeric: "tabular-nums",
+        }}
+      >
         {formatSeconds(elapsedSeconds)}
-        {isPaused ? " ⏸" : ""}
+        {isPaused && <Pause size={44} />}
       </div>
       <div style={{ display: "flex", gap: 12 }}>
         {isRunning ? (
@@ -82,6 +116,7 @@ export default function FocusMode({ activityId, onClose }: Props) {
           onBlur={() => setRunningNote(activity.id, note)}
         />
       )}
+      <ShortcutBar shortcuts={shortcuts} />
     </div>
   );
 }

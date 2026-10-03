@@ -9,9 +9,16 @@ interface ConfirmDialogProps {
   message: string;
   actions: ConfirmAction[];
   onCancel: () => void;
+  cancelLabel?: string;
 }
 
-export default function ConfirmDialog({ title, message, actions, onCancel }: ConfirmDialogProps) {
+export default function ConfirmDialog({
+  title,
+  message,
+  actions,
+  onCancel,
+  cancelLabel = "Annuler",
+}: ConfirmDialogProps) {
   return (
     <div className="modal-overlay" onMouseDown={onCancel}>
       <div className="modal" onMouseDown={(e) => e.stopPropagation()}>
@@ -19,7 +26,7 @@ export default function ConfirmDialog({ title, message, actions, onCancel }: Con
         <p style={{ color: "var(--text-muted)", fontSize: 13.5 }}>{message}</p>
         <div className="form-actions">
           <button className="btn" onClick={onCancel}>
-            Annuler
+            {cancelLabel}
           </button>
           {actions.map((action) => (
             <button
